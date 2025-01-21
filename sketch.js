@@ -8,29 +8,30 @@ let scaleFactor;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  scaleFactor = min(width,height) / 1000; // Calculate scaling factor based on canvas size
-  setupLevel(level);
-
-  // Create particle (starting point of the rays)
-  particle = new Particle();
-
-  // No cursor visible
-  noCursor();
+  scaleFactor = min(width, height) / 1000; // Scale factor
+  setupLevel(level); // Initialize the level
 }
 
 function draw() {
+  if (gameFinished) {
+    drawWinScreen(); // Display the win screen
+    return;
+  }
+
   background(0);
 
   if (gameStarted) {
+    // Draw walls
     for (let wall of walls) {
-      wall.show();
+      wall.show(); 
     }
 
-    particle.update(mouseX, mouseY); // Particle follows mouse
+    // Update particle position based on mouse only after the game has started
+    particle.update(mouseX, mouseY);
     particle.show();
-    particle.look(walls); // Show rays
+    particle.look(walls); // Show rays for collision detection
 
-    // Check collision with walls
+    // Check for collision with walls
     for (let wall of walls) {
       if (particleTouchesWall(wall)) {
         gameReset(); // Restart the game if collision occurs
@@ -38,24 +39,19 @@ function draw() {
       }
     }
 
-    // Show the goal
-    fill(0, 255, 0, 100); // Goal color
+    // Draw the goal
+    fill(0, 255, 0, 100);
     noStroke();
-    ellipse(goal.x, goal.y, 40 * scaleFactor, 40 * scaleFactor); // Goal size scaled
+    ellipse(goal.x, goal.y, 40 * scaleFactor, 40 * scaleFactor); // Goal size
 
-    // If player reaches the goal, progress or finish
+    // Check if the particle reaches the goal
     if (dist(particle.pos.x, particle.pos.y, goal.x, goal.y) < 40 * scaleFactor) {
       level++;
       if (level > 3) {
-        gameFinished = true; // Win after level 3
+        gameFinished = true; // End the game after level 3
       } else {
-        setupLevel(level); // Load next level
+        setupLevel(level); // Load the next level
       }
-    }
-
-    // Display win screen if all levels are completed
-    if (gameFinished) {
-      showWinScreen();
     }
   } else {
     // Display the start message
@@ -65,101 +61,96 @@ function draw() {
 
 function mousePressed() {
   if (!gameStarted) {
-    gameStarted = true; // Game starts on click
+    gameStarted = true; // Start the game on mouse click
   }
 }
 
-// Function to display the start message
+// Display the start message
 function showStartMessage() {
   fill(255);
-  textSize(32 * scaleFactor); // Scale text size
-  textAlign(CENTER, CENTER);
-  text("Click to Start!", width / 2, height / 2);
+  textSize(32 * scaleFactor);
+  textAlign(LEFT, CENTER);
+
+  // Draw the outline of the circle at top middle
+  noFill();
+  stroke(255);
+  ellipse(width / 2, 50 * scaleFactor, 30 * scaleFactor, 30 * scaleFactor); // Circle outline
+
+  // Text next to the circle
+  fill(255);
+  text("Click here to start", width / 2 + 40 * scaleFactor, 50 * scaleFactor); // Text to the right
 }
 
-// Function to display the win screen
-function showWinScreen() {
-  fill(0, 255, 0);
-  textSize(48 * scaleFactor); // Scale text size
+// Display the win screen
+function drawWinScreen() {
+  background(0); // Black background
+  fill(255); // White text
+  textSize(64 * scaleFactor);
   textAlign(CENTER, CENTER);
-  text("You Win!", width / 2, height / 2);
+  text("Congratulations!", width / 2, height / 2 - 50 * scaleFactor);
+
+  textSize(32 * scaleFactor);
+  text("You Win!", width / 2, height / 2 + 50 * scaleFactor);
+
+  textSize(24 * scaleFactor);
+  text("Refresh the page to play again.", width / 2, height / 2 + 120 * scaleFactor);
 }
 
-// Function to set up walls for each level
+// Setup the walls and goal for each level
 function setupLevel(level) {
-  walls = []; // Clear previous walls
-  particle = new Particle(); // Reset particle position
+  walls = []; // Clear previous level walls
 
-  // Fixed goal for each level
+  // Set the goal position based on the level
+  goal = createVector(
+    level === 1 ? 850 * scaleFactor : level === 2 ? 50 * scaleFactor : width - 50 * scaleFactor, // For level 3, goal is at bottom-right
+    level === 1 ? 850 * scaleFactor : level === 2 ? 50 * scaleFactor : height - 50 * scaleFactor // For level 3, goal is at bottom-right
+  );
+
+  // Add progressively more walls for difficulty
   if (level === 1) {
-    goal = createVector(850 * scaleFactor, 850 * scaleFactor);
+    createScatteredWalls(50); // 50 walls for level 1
   } else if (level === 2) {
-    goal = createVector(150 * scaleFactor, 850 * scaleFactor);
+    createScatteredWalls(100); // 100 walls for level 2
   } else if (level === 3) {
-    goal = createVector(850 * scaleFactor, 150 * scaleFactor);
+    createScatteredWalls(120); // 120 walls for level 3
   }
 
-  // Maze wall layouts for each level (occupy the whole canvas)
+  // Reset particle position based on the level
   if (level === 1) {
-    createLevel1Walls();
-  } 
-  ///else if (level === 2) {
-  ///  createLevel2Walls();
- /// } else if (level === 3) {
- ///   createLevel3Walls();
- /// }
-}
-
-// Function to create walls for level 1
-function createLevel1Walls() {
-  // Fixed walls for level 1, scaled
-  walls.push(new Boundary(100 * scaleFactor, 100 * scaleFactor, 300 * scaleFactor, 100 * scaleFactor));
-  walls.push(new Boundary(300 * scaleFactor, 100 * scaleFactor, 300 * scaleFactor, 300 * scaleFactor));
-  walls.push(new Boundary(300 * scaleFactor, 300 * scaleFactor, 700 * scaleFactor, 300 * scaleFactor));
-  walls.push(new Boundary(700 * scaleFactor, 300 * scaleFactor, 700 * scaleFactor, 700 * scaleFactor));
-  walls.push(new Boundary(300 * scaleFactor, 500 * scaleFactor, 300 * scaleFactor, 700 * scaleFactor));
-  walls.push(new Boundary(200 * scaleFactor, 600 * scaleFactor, 600 * scaleFactor, 600 * scaleFactor));
-  walls.push(new Boundary(100 * scaleFactor, 100 * scaleFactor, 500 * scaleFactor, 100 * scaleFactor));
-  walls.push(new Boundary(100 * scaleFactor, 100 * scaleFactor, 100 * scaleFactor, 500 * scaleFactor));
-  walls.push(new Boundary(300 * scaleFactor, 700 * scaleFactor, 800 * scaleFactor, 700 * scaleFactor));
-
-  // Adding a few more walls with gaps created, scaled
-  walls.push(new Boundary(400 * scaleFactor, 100 * scaleFactor, 400 * scaleFactor, 300 * scaleFactor)); // Gap created
-  walls.push(new Boundary(500 * scaleFactor, 300 * scaleFactor, 600 * scaleFactor, 300 * scaleFactor)); // Gap created
-  walls.push(new Boundary(300 * scaleFactor, 500 * scaleFactor, 300 * scaleFactor, 700 * scaleFactor)); // Gap created
-
-  // Add more small scattered walls for difficulty
-  for (let x = 0; x < width; x += 30 * scaleFactor) {
-    for (let y = 0; y < height; y += 30 * scaleFactor) {
-      if (random(1) < 0.15) { // Increased probability for more walls
-        if (random(1) < 0.5) {
-          walls.push(new Boundary(x, y, x + 30 * scaleFactor, y)); // Horizontal small wall
-        } else {
-          walls.push(new Boundary(x, y, x, y + 30 * scaleFactor)); // Vertical small wall
-        }
-      }
-    }
+    particle = new Particle(width - 50 * scaleFactor, 50 * scaleFactor); // Top-right corner
+  } else if (level === 2) {
+    particle = new Particle(50 * scaleFactor, 50 * scaleFactor); // Top-left corner (green dot)
+  } else if (level === 3) {
+    particle = new Particle(50 * scaleFactor, height - 50 * scaleFactor); // Bottom-left corner for level 3
   }
 }
 
-// Similar scaling for other levels (Level 2 and 3)...
-// Just make sure that all wall coordinates, gap positions, goal positions, etc., are scaled by `scaleFactor`
-
-// Function to reset the game
-function gameReset() {
-  level = 1; // Reset to level 1
-  gameStarted = false;
-  setupLevel(level); // Reload level 1
+// Create scattered walls across the canvas
+function createScatteredWalls(count) {
+  for (let i = 0; i < count; i++) {
+    let x1 = random(width);
+    let y1 = random(height);
+    let x2 = x1 + random(-150, 150) * scaleFactor; // Random short length
+    let y2 = y1 + random(-150, 150) * scaleFactor;
+    walls.push(new Boundary(x1, y1, x2, y2));
+  }
 }
 
-// Function to check if the particle touches a wall
+// Reset the game to level 1
+function gameReset() {
+  level = 1;
+  gameStarted = false;
+  setupLevel(level);
+}
+
+// Check if the particle touches a wall
 function particleTouchesWall(wall) {
   const d = dist(particle.pos.x, particle.pos.y, wall.a.x, wall.a.y) + dist(particle.pos.x, particle.pos.y, wall.b.x, wall.b.y);
   const wallLength = dist(wall.a.x, wall.a.y, wall.b.x, wall.b.y);
   return d <= wallLength + 5 * scaleFactor; // Particle touches the wall
 }
 
-// Walls class (fixed walls in specific positions)
+// Class for walls
 class Boundary {
   constructor(x1, y1, x2, y2) {
     this.a = createVector(x1, y1);
@@ -167,12 +158,12 @@ class Boundary {
   }
 
   show() {
-    stroke(255, 0, 0); // Red wall color
+    stroke(255, 0, 0);
     line(this.a.x, this.a.y, this.b.x, this.b.y);
   }
 }
 
-// Rays class
+// Class for rays
 class Ray {
   constructor(pos, angle) {
     this.pos = pos;
@@ -189,7 +180,7 @@ class Ray {
     stroke(255);
     push();
     translate(this.pos.x, this.pos.y);
-    line(0, 0, this.dir.x * 150 * scaleFactor, this.dir.y * 150 * scaleFactor); // Rays extend 150 pixels
+    line(0, 0, this.dir.x * 150 * scaleFactor, this.dir.y * 150 * scaleFactor);
     pop();
   }
 
@@ -211,6 +202,7 @@ class Ray {
 
     const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
     const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
+
     if (t > 0 && t < 1 && u > 0) {
       const pt = createVector();
       pt.x = x1 + t * (x2 - x1);
@@ -222,23 +214,22 @@ class Ray {
   }
 }
 
-// Particle class (starting point of rays)
+// Class for the particle
 class Particle {
-  constructor() {
-    this.pos = createVector(width / 2, height / 2); // Particle in the center
+  constructor(x, y) {
+    this.pos = createVector(x, y); // Set initial position
     this.rays = [];
     for (let a = 0; a < 360; a += 1) {
-      this.rays.push(new Ray(this.pos, radians(a))); // 360 rays (one for each direction)
+      this.rays.push(new Ray(this.pos, radians(a)));
     }
   }
 
   update(x, y) {
-    this.pos.set(x, y); // Particle follows mouse position
+    this.pos.set(x, y); // Update position to follow mouse
   }
 
   look(walls) {
-    for (let i = 0; i < this.rays.length; i++) {
-      const ray = this.rays[i];
+    for (let ray of this.rays) {
       let closest = null;
       let record = Infinity;
       for (let wall of walls) {
@@ -252,8 +243,8 @@ class Particle {
         }
       }
       if (closest) {
-        stroke(255, 100); // Ray color
-        line(this.pos.x, this.pos.y, closest.x, closest.y); // Draw the ray
+        stroke(255, 100);
+        line(this.pos.x, this.pos.y, closest.x, closest.y);
       }
     }
   }
@@ -261,6 +252,6 @@ class Particle {
   show() {
     fill(255);
     noStroke();
-    ellipse(this.pos.x, this.pos.y, 6 * scaleFactor); // Particle size scaled
+    ellipse(this.pos.x, this.pos.y, 6 * scaleFactor);
   }
 }
